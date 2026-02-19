@@ -10,7 +10,6 @@ services:
     restart: unless-stopped
     ports:
       - "25:25"
-      - "127.0.0.1:11334:11334"
     volumes:
       - postfix-spool:/var/spool/postfix
       - redis-data:/var/lib/redis
