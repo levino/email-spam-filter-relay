@@ -1,0 +1,22 @@
+# Mail Gateway: Postfix + rspamd + Redis + Unbound
+# Deploy via Coolify → Docker Compose → Git repo
+
+services:
+  mail-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mail-gateway
+    restart: unless-stopped
+    ports:
+      - "25:25"
+      - "127.0.0.1:11334:11334"
+    volumes:
+      - postfix-spool:/var/spool/postfix
+      - redis-data:/var/lib/redis
+      - rspamd-data:/var/lib/rspamd
+
+volumes:
+  postfix-spool:
+  redis-data:
+  rspamd-data:
