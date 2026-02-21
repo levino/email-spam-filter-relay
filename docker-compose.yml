@@ -137,8 +137,7 @@ configs:
 
   rspamd-actions:
     content: |
-      reject = 12;
-      add_header = 4;
+      reject = 10;
       greylist = 3;
 
   rspamd-classifier-bayes:
@@ -224,6 +223,9 @@ configs:
       sharkninja.com
       smartfx.com
       insper.edu.br
+      hs-send.com
+      arpsloe.de
+      comaxe.shop
 
   # ── Unbound ─────────────────────────────────────────────
 
