@@ -137,8 +137,7 @@ configs:
 
   rspamd-actions:
     content: |
-      reject = null;
-      add_header = 4;
+      reject = 10;
       greylist = 3;
 
   rspamd-classifier-bayes:
