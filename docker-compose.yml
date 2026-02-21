@@ -137,7 +137,7 @@ configs:
 
   rspamd-actions:
     content: |
-      reject = 12;
+      reject = null;
       add_header = 4;
       greylist = 3;
 
@@ -224,6 +224,7 @@ configs:
       sharkninja.com
       smartfx.com
       insper.edu.br
+      hs-send.com
 
   # ── Unbound ─────────────────────────────────────────────
 
