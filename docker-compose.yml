@@ -14,6 +14,287 @@ services:
       - postfix-spool:/var/spool/postfix
       - redis-data:/var/lib/redis
       - rspamd-data:/var/lib/rspamd
+    configs:
+      # Postfix
+      - source: postfix-main-cf
+        target: /etc/postfix/main.cf
+      - source: postfix-transport
+        target: /etc/postfix/transport
+      # rspamd
+      - source: rspamd-worker-proxy
+        target: /etc/rspamd/local.d/worker-proxy.inc
+      - source: rspamd-worker-normal
+        target: /etc/rspamd/local.d/worker-normal.inc
+      - source: rspamd-worker-controller
+        target: /etc/rspamd/local.d/worker-controller.inc
+      - source: rspamd-options
+        target: /etc/rspamd/local.d/options.inc
+      - source: rspamd-redis
+        target: /etc/rspamd/local.d/redis.conf
+      - source: rspamd-actions
+        target: /etc/rspamd/local.d/actions.conf
+      - source: rspamd-classifier-bayes
+        target: /etc/rspamd/local.d/classifier-bayes.conf
+      - source: rspamd-greylist
+        target: /etc/rspamd/local.d/greylist.conf
+      - source: rspamd-phishing
+        target: /etc/rspamd/local.d/phishing.conf
+      - source: rspamd-milter-headers
+        target: /etc/rspamd/local.d/milter_headers.conf
+      - source: rspamd-multimap
+        target: /etc/rspamd/local.d/multimap.conf
+      - source: rspamd-composites
+        target: /etc/rspamd/local.d/composites.conf
+      - source: rspamd-mx-check
+        target: /etc/rspamd/local.d/mx_check.conf
+      - source: rspamd-replies
+        target: /etc/rspamd/local.d/replies.conf
+      # rspamd maps
+      - source: map-spam-list-ids
+        target: /etc/rspamd/local.d/maps/spam_list_ids.map
+      - source: map-auto-submitted
+        target: /etc/rspamd/local.d/maps/auto_submitted.map
+      - source: map-blocked-domains
+        target: /etc/rspamd/local.d/maps/blocked_domains.map
+      # Unbound
+      - source: unbound-conf
+        target: /etc/unbound/unbound.conf
+      # Supervisor
+      - source: supervisord-conf
+        target: /etc/supervisord.conf
+
+configs:
+  # ── Postfix ──────────────────────────────────────────────
+
+  postfix-main-cf:
+    content: |
+      myhostname = mx.levinkeller.de
+      mydomain = levinkeller.de
+      myorigin = $mydomain
+      mydestination =
+      mynetworks = 127.0.0.0/8 172.16.0.0/12 10.0.0.0/8
+
+      relay_domains = levinkeller.de
+      transport_maps = lmdb:/etc/postfix/transport
+
+      smtpd_milters = inet:127.0.0.1:11332
+      non_smtpd_milters = inet:127.0.0.1:11332
+      milter_protocol = 6
+      milter_mail_macros = i {mail_addr} {client_addr} {client_name} {auth_authen}
+      milter_default_action = tempfail
+
+      smtp_tls_security_level = may
+      smtpd_tls_security_level = may
+      smtpd_tls_cert_file = /etc/postfix/smtpd.crt
+      smtpd_tls_key_file = /etc/postfix/smtpd.key
+      inet_protocols = all
+
+      smtpd_helo_required = yes
+      smtpd_recipient_restrictions =
+          permit_mynetworks,
+          reject_unauth_destination,
+          reject_invalid_hostname,
+          reject_non_fqdn_sender,
+          reject_non_fqdn_recipient,
+          reject_unknown_sender_domain,
+          reject_unknown_reverse_client_hostname,
+          reject_unauth_pipelining
+
+      message_size_limit = 52428800
+      compatibility_level = 3.9
+      maillog_file = /dev/stdout
+
+  postfix-transport:
+    content: |
+      levinkeller.de    smtp:[cp179.sp-server.net]:25
+
+  # ── rspamd ──────────────────────────────────────────────
+
+  rspamd-worker-proxy:
+    content: |
+      bind_socket = "*:11332";
+      milter = yes;
+      timeout = 120s;
+      upstream "local" { self_scan = yes; }
+
+  rspamd-worker-normal:
+    content: |
+      enabled = false;
+
+  rspamd-worker-controller:
+    content: |
+      bind_socket = "*:11334";
+
+  rspamd-options:
+    content: |
+      dns {
+        nameserver = "127.0.0.1:53";
+      }
+
+  rspamd-redis:
+    content: |
+      servers = "127.0.0.1:6379";
+
+  rspamd-actions:
+    content: |
+      reject = 12;
+      add_header = 4;
+      greylist = 3;
+
+  rspamd-classifier-bayes:
+    content: |
+      autolearn {
+        spam_threshold = 7.0;
+        ham_threshold = -0.5;
+        check_balance = false;
+        min_balance = 0.9;
+      }
+
+  rspamd-greylist:
+    content: |
+      enabled = true;
+      timeout = 5min;
+      expire = 30d;
+
+  rspamd-phishing:
+    content: |
+      openphish_enabled = true;
+      phishtank_enabled = true;
+
+  rspamd-milter-headers:
+    content: |
+      use = ["x-spamd-bar", "x-spam-level", "x-spam-status", "authentication-results"];
+      extended_spam_headers = true;
+
+  rspamd-multimap:
+    content: |
+      SPAM_LIST_ID {
+        type = "header";
+        header = "List-ID";
+        map = "/etc/rspamd/local.d/maps/spam_list_ids.map";
+        score = 10.0;
+      }
+      AUTO_REPLY_VIA_LIST {
+        type = "header";
+        header = "Auto-Submitted";
+        regexp = true;
+        map = "/etc/rspamd/local.d/maps/auto_submitted.map";
+        score = 0.1;
+      }
+      SPAM_ENVELOPE_DOMAIN {
+        type = "from";
+        filter = "email:domain";
+        map = "/etc/rspamd/local.d/maps/blocked_domains.map";
+        score = 10.0;
+      }
+
+  rspamd-composites:
+    content: |
+      AUTO_REPLY_ON_MAILING_LIST {
+        expression = "AUTO_REPLY_VIA_LIST & MAILLIST";
+        score = 8.0;
+      }
+
+  rspamd-mx-check:
+    content: |
+      enabled = true;
+
+  rspamd-replies:
+    content: |
+      action = no action;
+
+  # ── rspamd maps ─────────────────────────────────────────
+
+  map-spam-list-ids:
+    content: |
+      bg.lgtsjs.com
+
+  map-auto-submitted:
+    content: |
+      /auto-generated/i
+      /auto-replied/i
+      /auto-notified/i
+
+  map-blocked-domains:
+    content: |
+      lgtsjs.com
+      ansturme.de
+      nikosale.makeup
+      devalser.hair
+      sharkninja.com
+      smartfx.com
+      insper.edu.br
+
+  # ── Unbound ─────────────────────────────────────────────
+
+  unbound-conf:
+    content: |
+      server:
+        interface: 127.0.0.1
+        port: 53
+        access-control: 127.0.0.0/8 allow
+        do-ip6: no
+        username: unbound
+        directory: /var/lib/unbound
+        pidfile: /run/unbound/unbound.pid
+        auto-trust-anchor-file: /var/lib/unbound/root.key
+        num-threads: 2
+        msg-cache-size: 16m
+        rrset-cache-size: 32m
+        cache-min-ttl: 60
+        cache-max-ttl: 86400
+        hide-identity: yes
+        hide-version: yes
+        harden-glue: yes
+        harden-dnssec-stripped: yes
+
+  # ── Supervisor ──────────────────────────────────────────
+
+  supervisord-conf:
+    content: |
+      [supervisord]
+      nodaemon=true
+      user=root
+      logfile=/dev/stdout
+      logfile_maxbytes=0
+      pidfile=/run/supervisord.pid
+
+      [program:redis]
+      command=redis-server --daemonize no --loglevel warning --save 60 1 --dir /var/lib/redis --maxmemory 128mb --maxmemory-policy volatile-lru
+      autorestart=true
+      priority=10
+      stdout_logfile=/dev/stdout
+      stdout_logfile_maxbytes=0
+      stderr_logfile=/dev/stderr
+      stderr_logfile_maxbytes=0
+
+      [program:unbound]
+      command=unbound -d -c /etc/unbound/unbound.conf
+      autorestart=true
+      priority=20
+      stdout_logfile=/dev/stdout
+      stdout_logfile_maxbytes=0
+      stderr_logfile=/dev/stderr
+      stderr_logfile_maxbytes=0
+
+      [program:rspamd]
+      command=rspamd -f -u rspamd -g rspamd
+      autorestart=true
+      priority=30
+      stdout_logfile=/dev/stdout
+      stdout_logfile_maxbytes=0
+      stderr_logfile=/dev/stderr
+      stderr_logfile_maxbytes=0
+
+      [program:postfix]
+      command=/usr/sbin/postfix start-fg
+      autorestart=true
+      priority=40
+      startsecs=10
+      stdout_logfile=/dev/stdout
+      stdout_logfile_maxbytes=0
+      stderr_logfile=/dev/stderr
+      stderr_logfile_maxbytes=0
 
 volumes:
   postfix-spool:
