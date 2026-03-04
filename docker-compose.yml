@@ -115,7 +115,11 @@ configs:
       bind_socket = "*:11332";
       milter = yes;
       timeout = 120s;
-      upstream "local" { self_scan = yes; }
+      upstream "local" {
+        name = "localhost";
+        default = yes;
+        hosts = "localhost:11333";
+      }
 
   rspamd-worker-normal:
     content: |
