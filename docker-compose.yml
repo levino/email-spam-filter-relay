@@ -119,7 +119,8 @@ configs:
 
   rspamd-worker-normal:
     content: |
-      enabled = false;
+      enabled = true;
+      bind_socket = "localhost:11333";
 
   rspamd-worker-controller:
     content: |
