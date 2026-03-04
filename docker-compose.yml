@@ -81,7 +81,7 @@ configs:
       non_smtpd_milters = inet:127.0.0.1:11332
       milter_protocol = 6
       milter_mail_macros = i {mail_addr} {client_addr} {client_name} {auth_authen}
-      milter_default_action = accept
+      milter_default_action = tempfail
 
       smtp_tls_security_level = may
       smtpd_tls_security_level = may
@@ -291,7 +291,7 @@ configs:
       stderr_logfile_maxbytes=0
 
       [program:postfix]
-      command=/usr/sbin/postfix start-fg
+      command=sh -c 'echo "Waiting for rspamd on port 11332..." && while ! (echo QUIT | nc -w 1 127.0.0.1 11332 >/dev/null 2>&1); do sleep 1; done && echo "rspamd is ready, starting Postfix" && /usr/sbin/postfix start-fg'
       autorestart=true
       priority=40
       startsecs=10
