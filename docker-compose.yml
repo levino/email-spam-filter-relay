@@ -137,8 +137,9 @@ configs:
 
   rspamd-actions:
     content: |
-      reject = 10;
-      greylist = 3;
+      reject = null;
+      add_header = 3;
+      greylist = null;
 
   rspamd-classifier-bayes:
     content: |
@@ -151,9 +152,7 @@ configs:
 
   rspamd-greylist:
     content: |
-      enabled = true;
-      timeout = 5min;
-      expire = 30d;
+      enabled = false;
 
   rspamd-phishing:
     content: |
