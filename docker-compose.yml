@@ -81,7 +81,7 @@ configs:
       non_smtpd_milters = inet:127.0.0.1:11332
       milter_protocol = 6
       milter_mail_macros = i {mail_addr} {client_addr} {client_name} {auth_authen}
-      milter_default_action = tempfail
+      milter_default_action = accept
 
       smtp_tls_security_level = may
       smtpd_tls_security_level = may
